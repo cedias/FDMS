@@ -4,6 +4,17 @@ Created on Sun Oct  5 08:46:56 2014
 
 @author: charles
 """
+import re
+from gensim.models import tfidfmodel as tf
+import codecs
+from gensim import corpora
+from gensim import matutils as mtutils
+from sklearn import linear_model as lm
+from sklearn import cross_validation as cv
+from sklearn.naive_bayes import MultinomialNB
+from sklearn import svm
+from sklearn import feature_selection as feat
+
 
 def preprocess(review):
     regexP = ur"[,;.:\(\)\"]+" #regex of signs to take off
@@ -12,9 +23,9 @@ def preprocess(review):
     return review
     
 
-positiveFile = open("pos.txt","r")
-negativeFile = open("neg.txt","r")
-testFile = open("testSentiment.txt","r")
+positiveFile = open("pos_phrases.txt","r")
+negativeFile = open("neg_phrases.txt","r")
+testFile = open("testSentiment_phrases.txt","r")
 
 cptLinePos = 0
 cptLineNeg = 0
@@ -50,7 +61,7 @@ stopfile = open("stopwords","r")
 for line in stopfile:
     stoplist.add(line.strip())
 
-upper = (len(alltxts)/3)*10000
+upper = (len(labels)/4)
 print "upperbound = %d" % upper
 lower = 0
 stop_ids = [dictionary.token2id[stopword] for stopword in stoplist  if stopword in dictionary.token2id]
@@ -64,23 +75,26 @@ print "taille du dictionnaire après diminution: %d" % len(dictionary)
 texts = [[word for word in doc.split(" ") ]for doc in reviews]
 corpus = [dictionary.doc2bow(text) for text in texts]
 
-vecteurs = mtutils.corpus2csc(corpus, num_terms=len(dictionary), num_docs=len(labels))
+tfidf = tf.TfidfModel(corpus)
+tfidf_corpus = tfidf[corpus]
+vecteurs = mtutils.corpus2csc(tfidf_corpus, num_terms=len(dictionary), num_docs=len(labels))
 vecteurs = vecteurs.T
 
 res = feat.chi2(vecteurs, labels)
 
 ids = [index for index in np.where(res == min(res[0]))[1]]
-dictionary.filter_tokens(ids) # remove stop words and words that appear only once
-dictionary.compactify() # remove gaps in id sequence after words that were removed
+dictionary.filter_tokens(ids)
+dictionary.compactify() 
 print "taille du dictionnaire après Chi2 diminution: %d" % len(dictionary)
-
-vecteurs = mtutils.corpus2csc(corpus, num_terms=len(dictionary), num_docs=len(labels))
-vecteurs = vecteurs.T
 
 ## PROJECTION
 texts = [[word for word in doc.split(" ") ]for doc in reviews]
 corpus = [dictionary.doc2bow(text) for text in texts]
-vecteurs = mtutils.corpus2csc(corpus, num_terms=len(dictionary), num_docs=len(labels))
+
+tfidf = tf.TfidfModel(corpus)
+tfidf_corpus = tfidf[corpus]
+
+vecteurs = mtutils.corpus2csc(tfidf_corpus, num_terms=len(dictionary), num_docs=len(labels))
 vecteurs  = vecteurs.T
 
 ##Perce: 0.84 mean
@@ -89,7 +103,7 @@ vecteurs  = vecteurs.T
 
 #MultinomialNaiveBayes : 0.88 
 #prior = np.array([0.25,0.75])
-classifier = MultinomialNB()
+classifier = MultinomialNB(alpha=4)
 classifier.fit(vecteurs,labels)
 
 #SVM
@@ -105,8 +119,8 @@ classifier.fit(vecteurs,labels)
 
 texts = [[word for word in doc.split(" ") ]for doc in test]
 corpusTest = [dictionary.doc2bow(text) for text in texts]
-
-vecteursTest = mtutils.corpus2csc(corpusTest, num_terms=len(dictionary), num_docs=nblignesTest)
+tfidf_corpusTest= tfidf[corpusTest]
+vecteursTest = mtutils.corpus2csc(tfidf_corpusTest, num_terms=len(dictionary), num_docs=cptLineTest)
 
 vecteursTest = vecteursTest.T
 

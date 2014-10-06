@@ -17,8 +17,8 @@ from sklearn import feature_selection as feat
 from sklearn import svm
 ###########LOAD & FIT Learn
 
-fname = "data/chiracLearn"
-regexP = ur"[_,;.:'\"]+"
+fname = "data/chiracLearn_phrases"
+regexP = ur"[,;.:'\"]+"
 nblignes = compteLignes(fname)
 print "nblignes = %d"%nblignes
 alltxts = []
@@ -115,7 +115,7 @@ scores = cv.cross_val_score(classifier, vecteurs,labels, cv=5)
 print scores.mean()
 
 ####Load & Test
-fname = "data/chiracTest"
+fname = "data/chiracTest_phrases"
 
 nblignesTest = compteLignes(fname)
 print "nblignes = %d"%nblignes
